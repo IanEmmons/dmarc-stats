@@ -1,5 +1,6 @@
 plugins {
 	id 'application'
+	id 'com.intershop.gradle.jaxb' version '6.0.0'
 }
 
 repositories {
@@ -14,10 +15,34 @@ dependencies {
 	implementation 'org.eclipse.angus:jakarta.mail:2.0.2'
 	//implementation 'org.apache.poi:poi-ooxml:5.2.3'
 	//implementation 'org.apache.logging.log4j:log4j-core:2.20.0'
+	implementation 'jakarta.xml.bind:jakarta.xml.bind-api:3.0.1'
+	implementation 'jakarta.activation:jakarta.activation-api:2.0.1'
+	implementation 'org.glassfish.jaxb:jaxb-runtime:3.0.1'
+	//implementation 'com.sun.xml.bind:jaxb-xjc:3.0.1'
+	//implementation 'com.sun.xml.bind:jaxb-jxc:3.0.1'
+	//implementation 'com.sun.xml.bind:jaxb-impl:3.0.1'
+	//implementation 'com.sun.xml.bind:jaxb-core:3.0.1'
 }
 
 group = 'mobi.emmons'
 version = '0.0.1'
+
+jaxb {
+	javaGen {
+		dmarc_stats {
+			schema = file("${projectDir}/src/main/resources/dmarc.xsd")
+			//binding = file("${projectDir}/src/main/resources/binding.xjb")
+			packageName = 'mobi.emmons.dmarc_stats.generated'
+			strictValidation = false
+		}
+	}
+}
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(17)
+	}
+}
 
 tasks.withType(JavaCompile) {
 	options.compilerArgs += '-Xlint:all'
@@ -28,12 +53,6 @@ testing {
 		test {
 			useJUnitJupiter('5.9.3')
 		}
-	}
-}
-
-java {
-	toolchain {
-		languageVersion = JavaLanguageVersion.of(17)
 	}
 }
 
