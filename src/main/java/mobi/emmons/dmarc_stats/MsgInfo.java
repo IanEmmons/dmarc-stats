@@ -70,8 +70,7 @@ public class MsgInfo {
 		var numParts = xmlParts.size();
 		if (numParts > 1) {
 			throw new UnexpectedMessageFormatException(
-				"Message '%1$s' has %2$d XML attachments"
-					.formatted(subject, numParts));
+				"Message '%1$s' has %2$d XML attachments".formatted(subject, numParts));
 		}
 	}
 

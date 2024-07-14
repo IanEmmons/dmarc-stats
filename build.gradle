@@ -62,6 +62,7 @@ task runStats(type: JavaExec) {
 	classpath = sourceSets.main.runtimeClasspath
 	//systemProperty 'portal.password', "$portalPassword"
 	args [
+		'message-store',
 		'imappro.zoho.com',
 		'ian@emmons.mobi',
 		"${project.property('zoho.email.password')}",

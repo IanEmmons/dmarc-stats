@@ -29,6 +29,7 @@ class XmlNamespaceTranslatorTest {
 	private static final String EXPECTED_OUTPUT = "dmarc-report-fixed.xml";
 	private static final Charset CHAR_SET = StandardCharsets.UTF_8;
 
+	@SuppressWarnings("static-method")
 	@Test
 	void translatorWorks() throws ParserConfigurationException, SAXException, IOException,
 			ReflectiveOperationException {
@@ -47,6 +48,7 @@ class XmlNamespaceTranslatorTest {
 		}
 	}
 
+	@SuppressWarnings("static-method")
 	@Test
 	void jaxbWorks() throws ParserConfigurationException, SAXException, IOException,
 			JAXBException {
@@ -58,11 +60,8 @@ class XmlNamespaceTranslatorTest {
 			//	.addTranslation("", MsgInfo.DMARC_NS)
 			//	.translateNamespaces(doc);
 
-			var context = JAXBContext.newInstance(Feedback.class);
-			var feedback = context.createUnmarshaller().unmarshal(doc, Feedback.class).getValue();
-
-			System.out.format("%1$s, %2$s, %3$s, %4$d reports%n",
-				feedback.getVersion(), feedback.getReportMetadata(), feedback.getPolicyPublished(), feedback.getRecord().size());
+			var unmarshaller = JAXBContext.newInstance(Feedback.class).createUnmarshaller();
+			var feedback = unmarshaller.unmarshal(doc, Feedback.class).getValue();
 
 			assertEquals("Outlook.com", feedback.getReportMetadata().getOrgName());
 			assertEquals("westinefamily.com", feedback.getPolicyPublished().getDomain());
