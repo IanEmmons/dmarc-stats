@@ -15,7 +15,10 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import javax.xml.parsers.ParserConfigurationException;
+
 import org.eclipse.angus.mail.util.BASE64DecoderStream;
+import org.xml.sax.SAXException;
 
 import jakarta.mail.BodyPart;
 import jakarta.mail.Flags;
@@ -83,12 +86,21 @@ public class App {
 		folder = args[3];
 	}
 
-	private void run() throws MessagingException, IOException, JAXBException {
+	private static final boolean SKIP = true;
+	private void run() throws MessagingException, IOException, JAXBException,
+			ParserConfigurationException, SAXException {
 		List<MsgInfo> msgInfos = downloadMsgInfo(host, user, password, folder);
 		for (var msgInfo : msgInfos) {
 			var feedback = msgInfo.feedback();
 			System.out.format("Message from %1$s at %2$s has %3$d records%n",
 				msgInfo.from(), msgInfo.time(), feedback.getRecord().size());
+		}
+		if (!SKIP) {
+			for (var msgInfo : msgInfos) {
+				for (var xml : msgInfo.xmlParts()) {
+					System.out.format("=========================%n%1$s%n", xml);
+				}
+			}
 		}
 	}
 
