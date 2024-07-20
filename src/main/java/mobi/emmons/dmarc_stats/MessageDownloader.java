@@ -5,9 +5,12 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
@@ -17,7 +20,6 @@ import java.util.zip.ZipInputStream;
 import org.eclipse.angus.mail.util.BASE64DecoderStream;
 
 import jakarta.mail.BodyPart;
-import jakarta.mail.Flags;
 import jakarta.mail.Folder;
 import jakarta.mail.Message;
 import jakarta.mail.MessagingException;
@@ -25,9 +27,14 @@ import jakarta.mail.Session;
 import jakarta.mail.internet.ContentType;
 import jakarta.mail.internet.MimeMultipart;
 import jakarta.mail.internet.ParseException;
-import jakarta.mail.search.FlagTerm;
+import jakarta.mail.search.ComparisonTerm;
+import jakarta.mail.search.ReceivedDateTerm;
+import jakarta.mail.search.SearchTerm;
 
 public class MessageDownloader {
+	private static final boolean SKIP_MESSAGE_PART_LISTING = true;
+	private static final boolean SKIP_BRIEF_MESSAGE_LISTING = false;
+
 	private static final ContentType CT_GZIP = newContentType("application/gzip");
 	private static final ContentType CT_OCTET_STREAM = newContentType("application/octet-stream");
 	private static final ContentType CT_ZIP = newContentType("application/zip");
@@ -41,7 +48,7 @@ public class MessageDownloader {
 	}
 
 	public static List<MsgInfo> download(String host, String user, String password,
-			String folder) throws MessagingException, IOException {
+			String folder, Long fromTime) throws MessagingException, IOException {
 		var p = new Properties();
 		p.put("mail.store.protocol", "imaps");
 		p.put("mail.host", host);
@@ -55,9 +62,9 @@ public class MessageDownloader {
 			try (var emailFolder = store.getFolder(folder)) {
 				emailFolder.open(Folder.READ_ONLY);
 
-				Message[] messages = emailFolder.search(
-					new FlagTerm(new Flags(Flags.Flag.SEEN), false));
-				//Message[] messages = emailFolder.getMessages();
+				Message[] messages = (fromTime == null)
+					? emailFolder.getMessages()
+					: emailFolder.search(buildFilter(fromTime));
 
 				for (var message : messages) {
 					var from = Arrays.stream(message.getFrom())
@@ -71,7 +78,31 @@ public class MessageDownloader {
 				}
 			}
 		}
+
+		if (!SKIP_BRIEF_MESSAGE_LISTING) {
+			System.out.format("Listing of %1$d messages:%n", msgInfos.size());
+			for (var msgInfo : msgInfos) {
+				var feedback = msgInfo.feedback();
+				System.out.format("Message from %1$s at %2$s has %3$d records%n",
+					msgInfo.from(), msgInfo.time(), feedback.getRecord().size());
+			}
+		}
+		if (!SKIP_MESSAGE_PART_LISTING) {
+			for (var msgInfo : msgInfos) {
+				for (var xml : msgInfo.xmlParts()) {
+					System.out.format("=========================%n%1$s%n", xml);
+				}
+			}
+		}
 		return msgInfos;
+	}
+
+	private static SearchTerm buildFilter(Long fromTime) {
+		Objects.requireNonNull(fromTime, "fromTime");
+		SearchTerm dateTerm = new ReceivedDateTerm(ComparisonTerm.GE,
+			Date.from(Instant.ofEpochSecond(fromTime.longValue())));
+		//SearchTerm flagTerm = new FlagTerm(new Flags(Flags.Flag.SEEN), false);
+		return dateTerm;
 	}
 
 	private static void unpack(Object content, ContentType contentType, String fileExt, MsgInfo msgInfo)

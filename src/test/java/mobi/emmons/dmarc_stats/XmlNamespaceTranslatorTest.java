@@ -33,13 +33,12 @@ class XmlNamespaceTranslatorTest {
 	@Test
 	void translatorWorks() throws ParserConfigurationException, SAXException, IOException,
 			ReflectiveOperationException {
-		var db = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+		var dbf = DocumentBuilderFactory.newInstance();
+		dbf.setNamespaceAware(false);
 		try (var is = getRsrcAsStream(EXAMPLE_XML)) {
-			var doc = db.parse(new InputSource(is));
+			var doc = dbf.newDocumentBuilder().parse(new InputSource(is));
 
-			new XmlNamespaceTranslator()
-				.addTranslation("", MsgInfo.DMARC_NS)
-				.translateNamespaces(doc);
+			MsgInfo.translateNamespaces(doc);
 
 			var actualOutput = write(doc);
 			var expectedOutput = getRsrcAsString(EXPECTED_OUTPUT);
@@ -52,13 +51,12 @@ class XmlNamespaceTranslatorTest {
 	@Test
 	void jaxbWorks() throws ParserConfigurationException, SAXException, IOException,
 			JAXBException {
-		var db = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+		var dbf = DocumentBuilderFactory.newInstance();
+		dbf.setNamespaceAware(false);
 		try (var is = getRsrcAsStream(EXAMPLE_XML)) {
-			var doc = db.parse(new InputSource(is));
+			var doc = dbf.newDocumentBuilder().parse(new InputSource(is));
 
-			//new XmlNamespaceTranslator()
-			//	.addTranslation("", MsgInfo.DMARC_NS)
-			//	.translateNamespaces(doc);
+			// MsgInfo.translateNamespaces(doc);
 
 			var unmarshaller = JAXBContext.newInstance(Feedback.class).createUnmarshaller();
 			var feedback = unmarshaller.unmarshal(doc, Feedback.class).getValue();

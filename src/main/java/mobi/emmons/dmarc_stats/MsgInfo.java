@@ -3,6 +3,7 @@ package mobi.emmons.dmarc_stats;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
+import java.io.UncheckedIOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -20,7 +21,7 @@ import jakarta.xml.bind.JAXBException;
 import mobi.emmons.dmarc_stats.generated.Feedback;
 
 public class MsgInfo {
-	public static final String DMARC_NS = "http://dmarc.org/dmarc-xml/0.1";
+	private static final String DMARC_NS = "http://dmarc.org/dmarc-xml/0.1";
 
 	private final String from;
 	private final String subject;
@@ -76,24 +77,26 @@ public class MsgInfo {
 
 	// https://stackoverflow.com/questions/29622877/jaxb-ignore-the-namespace-on-unmarshalling
 	// https://stackoverflow.com/questions/1492428/javadom-how-do-i-set-the-base-namespace-of-an-already-created-document
-	public Feedback feedback() throws JAXBException, IOException, ParserConfigurationException, SAXException {
+	public Feedback feedback() {
 		checkValidity();
 		if (xmlParts.size() < 1) {
 			return null;
 		}
 		var dbf = DocumentBuilderFactory.newInstance();
 		dbf.setNamespaceAware(false);
-		var db = dbf.newDocumentBuilder();
-		var unmarshaller = JAXBContext.newInstance(Feedback.class).createUnmarshaller();
 		try (Reader rdr = new StringReader(xmlParts.get(0))) {
-			var doc = db.parse(new InputSource(rdr));
+			var doc = dbf.newDocumentBuilder().parse(new InputSource(rdr));
 			//translateNamespaces(doc);
+			var unmarshaller = JAXBContext.newInstance(Feedback.class).createUnmarshaller();
 			return unmarshaller.unmarshal(doc, Feedback.class).getValue();
+		} catch (IOException ex) {
+			throw new UncheckedIOException(ex);
+		} catch (ParserConfigurationException | SAXException | JAXBException ex) {
+			throw new IllegalStateException(ex);
 		}
 	}
 
-	@SuppressWarnings("unused")
-	private static void translateNamespaces(Document doc) {
+	public static void translateNamespaces(Document doc) {
 		new XmlNamespaceTranslator()
 			.addTranslation("", DMARC_NS)
 			.translateNamespaces(doc);

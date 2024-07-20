@@ -4,14 +4,8 @@ package mobi.emmons.dmarc_stats;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
-
-import javax.xml.parsers.ParserConfigurationException;
-
-import org.xml.sax.SAXException;
 
 import jakarta.mail.MessagingException;
-import jakarta.xml.bind.JAXBException;
 
 public class App {
 	private final File storageDir;
@@ -57,21 +51,8 @@ public class App {
 		emailFolder = args[4];
 	}
 
-	private static final boolean SKIP = true;
-	private void run() throws MessagingException, IOException, JAXBException,
-			ParserConfigurationException, SAXException {
-		List<MsgInfo> msgInfos = MessageDownloader.download(host, user, password, emailFolder);
-		for (var msgInfo : msgInfos) {
-			var feedback = msgInfo.feedback();
-			System.out.format("Message from %1$s at %2$s has %3$d records%n",
-				msgInfo.from(), msgInfo.time(), feedback.getRecord().size());
-		}
-		if (!SKIP) {
-			for (var msgInfo : msgInfos) {
-				for (var xml : msgInfo.xmlParts()) {
-					System.out.format("=========================%n%1$s%n", xml);
-				}
-			}
-		}
+	private void run() throws MessagingException, IOException {
+		var store = new DmarcReportStore(storageDir, host, user, password, emailFolder);
+		var reports = store.getAllReports(true);
 	}
 }

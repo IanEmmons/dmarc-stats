@@ -27,7 +27,7 @@ jaxb {
 	javaGen {
 		dmarc_stats {
 			schema = file("${projectDir}/src/main/resources/dmarc.xsd")
-			//binding = file("${projectDir}/src/main/resources/binding.xjb")
+			binding = file("${projectDir}/src/main/resources/binding.xjb")
 			packageName = 'mobi.emmons.dmarc_stats.generated'
 			strictValidation = true
 		}
