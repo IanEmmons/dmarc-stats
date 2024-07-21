@@ -53,6 +53,6 @@ public class App {
 
 	private void run() throws MessagingException, IOException {
 		var store = new DmarcReportStore(storageDir, host, user, password, emailFolder);
-		var reports = store.getAllReports(true);
+		var reports = store.getAllReports();
 	}
 }

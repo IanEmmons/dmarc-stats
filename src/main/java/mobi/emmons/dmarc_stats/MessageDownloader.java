@@ -32,9 +32,6 @@ import jakarta.mail.search.ReceivedDateTerm;
 import jakarta.mail.search.SearchTerm;
 
 public class MessageDownloader {
-	private static final boolean SKIP_MESSAGE_PART_LISTING = true;
-	private static final boolean SKIP_BRIEF_MESSAGE_LISTING = false;
-
 	private static final ContentType CT_GZIP = newContentType("application/gzip");
 	private static final ContentType CT_OCTET_STREAM = newContentType("application/octet-stream");
 	private static final ContentType CT_ZIP = newContentType("application/zip");
@@ -75,22 +72,6 @@ public class MessageDownloader {
 					var msgInfo = new MsgInfo(from, subject, time);
 					msgInfos.add(msgInfo);
 					unpack(message.getContent(), getContentType(message), getFileExt(message), msgInfo);
-				}
-			}
-		}
-
-		if (!SKIP_BRIEF_MESSAGE_LISTING) {
-			System.out.format("Listing of %1$d messages:%n", msgInfos.size());
-			for (var msgInfo : msgInfos) {
-				var feedback = msgInfo.feedback();
-				System.out.format("Message from %1$s at %2$s has %3$d records%n",
-					msgInfo.from(), msgInfo.time(), feedback.getRecord().size());
-			}
-		}
-		if (!SKIP_MESSAGE_PART_LISTING) {
-			for (var msgInfo : msgInfos) {
-				for (var xml : msgInfo.xmlParts()) {
-					System.out.format("=========================%n%1$s%n", xml);
 				}
 			}
 		}

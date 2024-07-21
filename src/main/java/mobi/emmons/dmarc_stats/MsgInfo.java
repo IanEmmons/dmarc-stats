@@ -1,23 +1,12 @@
 package mobi.emmons.dmarc_stats;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.io.StringReader;
-import java.io.UncheckedIOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-
 import org.w3c.dom.Document;
-import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
 
-import jakarta.xml.bind.JAXBContext;
-import jakarta.xml.bind.JAXBException;
 import mobi.emmons.dmarc_stats.generated.Feedback;
 
 public class MsgInfo {
@@ -67,32 +56,17 @@ public class MsgInfo {
 		xmlParts.add(newPart);
 	}
 
-	public void checkValidity() {
+	// https://stackoverflow.com/questions/29622877/jaxb-ignore-the-namespace-on-unmarshalling
+	// https://stackoverflow.com/questions/1492428/javadom-how-do-i-set-the-base-namespace-of-an-already-created-document
+	public Feedback feedback() {
 		var numParts = xmlParts.size();
 		if (numParts > 1) {
 			throw new UnexpectedMessageFormatException(
 				"Message '%1$s' has %2$d XML attachments".formatted(subject, numParts));
-		}
-	}
-
-	// https://stackoverflow.com/questions/29622877/jaxb-ignore-the-namespace-on-unmarshalling
-	// https://stackoverflow.com/questions/1492428/javadom-how-do-i-set-the-base-namespace-of-an-already-created-document
-	public Feedback feedback() {
-		checkValidity();
-		if (xmlParts.size() < 1) {
+		} else if (numParts < 1) {
 			return null;
-		}
-		var dbf = DocumentBuilderFactory.newInstance();
-		dbf.setNamespaceAware(false);
-		try (Reader rdr = new StringReader(xmlParts.get(0))) {
-			var doc = dbf.newDocumentBuilder().parse(new InputSource(rdr));
-			//translateNamespaces(doc);
-			var unmarshaller = JAXBContext.newInstance(Feedback.class).createUnmarshaller();
-			return unmarshaller.unmarshal(doc, Feedback.class).getValue();
-		} catch (IOException ex) {
-			throw new UncheckedIOException(ex);
-		} catch (ParserConfigurationException | SAXException | JAXBException ex) {
-			throw new IllegalStateException(ex);
+		} else {
+			return DmarcReportStore.parseReport(xmlParts.get(0));
 		}
 	}
 
