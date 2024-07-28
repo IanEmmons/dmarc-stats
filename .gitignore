@@ -4,5 +4,6 @@
 .settings/
 bin/
 build/
+identifier-report.csv
 message-store/
 *.code-workspace

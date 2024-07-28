@@ -16,18 +16,21 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+import org.glassfish.jaxb.runtime.marshaller.NamespacePrefixMapper;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 import jakarta.mail.MessagingException;
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
+import jakarta.xml.bind.Marshaller;
 import mobi.emmons.dmarc_stats.generated.DateRangeType;
 import mobi.emmons.dmarc_stats.generated.Feedback;
 import mobi.emmons.dmarc_stats.generated.ReportMetadataType;
@@ -56,13 +59,18 @@ public class DmarcReportStore {
 
 	public List<Feedback> getAllReports() throws IOException, MessagingException {
 		var reports = getDownloadedReports();
+		System.out.format("Num reports in store: %1$d%n", reports.size());
 		var latestReportTime = getLatestReportTime(reports);
+		System.out.format("Getting new reports starting at time %1$d%n", latestReportTime);
+		var counter = new AtomicLong();
 		MessageDownloader
 			.download(emailHost, emailUser, emailPassword, emailFolder, latestReportTime)
 			.stream()
 			.map(MsgInfo::feedback)
 			.peek(this::writeReportToStorage)
+			.peek(feedback -> counter.incrementAndGet())
 			.forEach(reports::add);
+		System.out.format("Downloaded %1$d new reports%n", counter.get());
 		return reports;
 	}
 
@@ -70,7 +78,7 @@ public class DmarcReportStore {
 		var fs = FileSystems.getDefault();
 		var matcher = fs.getPathMatcher("glob:dmarc-*.xml");
 		BiPredicate<Path, BasicFileAttributes> predicate = (path, attrs) -> {
-			return attrs.isRegularFile() && matcher.matches(path);
+			return attrs.isRegularFile() && matcher.matches(path.getFileName());
 		};
 		try (var stream = Files.find(storageDir.toPath(), Integer.MAX_VALUE, predicate, FileVisitOption.FOLLOW_LINKS)) {
 			return stream
@@ -126,6 +134,15 @@ public class DmarcReportStore {
 			var filePath = new File(storageDir, "dmarc-%1$s.xml".formatted(
 				feedback.getReportMetadata().getReportId()));
 			var marshaller = JAXBContext.newInstance(Feedback.class).createMarshaller();
+			marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
+			marshaller.setProperty("org.glassfish.jaxb.namespacePrefixMapper", new NamespacePrefixMapper() {
+				@Override
+				public String getPreferredPrefix(String nsUri, String suggestion, boolean requirePrefix) {
+					return "http://dmarc.org/dmarc-xml/0.1".equals(nsUri)
+						? "dmarc"
+						: null;
+				}
+			});
 			marshaller.marshal(feedback, filePath);
 		} catch (JAXBException ex) {
 			throw new IllegalStateException(ex);
