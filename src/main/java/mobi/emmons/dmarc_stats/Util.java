@@ -10,4 +10,12 @@ public class Util {
 		}
 		return strParam;
 	}
+
+	public static boolean isNonBlank(String str) {
+		return !(str == null || str.isBlank());
+	}
+
+	public static String nullToEmpty(String str) {
+		return (str == null) ? "" : str.strip();
+	}
 }
