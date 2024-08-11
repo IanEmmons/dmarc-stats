@@ -24,6 +24,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.glassfish.jaxb.runtime.marshaller.NamespacePrefixMapper;
+import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
@@ -36,6 +37,8 @@ import mobi.emmons.dmarc_stats.generated.Feedback;
 import mobi.emmons.dmarc_stats.generated.ReportMetadataType;
 
 public class DmarcReportStore {
+	private static final String DMARC_NS = "http://dmarc.org/dmarc-xml/0.1";
+
 	private final File storageDir;
 	private final String emailHost;
 	private final String emailUser;
@@ -63,13 +66,17 @@ public class DmarcReportStore {
 		var latestReportTime = getLatestReportTime(reports);
 		System.out.format("Getting new reports starting at time %1$d%n", latestReportTime);
 		var counter = new AtomicLong();
-		MessageDownloader
-			.download(emailHost, emailUser, emailPassword, emailFolder, latestReportTime)
-			.stream()
-			.map(MsgInfo::feedback)
-			.peek(this::writeReportToStorage)
-			.peek(feedback -> counter.incrementAndGet())
-			.forEach(reports::add);
+
+		try (var downloader = new MessageDownloader(emailHost, emailUser, emailPassword, emailFolder)) {
+			var msgInfos = downloader.download();
+			msgInfos.stream()
+				.map(MsgInfo::xmlPart)
+				.map(DmarcReportStore::parseReport)
+				.peek(this::writeReportToStorage)
+				.peek(feedback -> counter.incrementAndGet())
+				.forEach(reports::add);
+			downloader.setMessageSeenFlags(msgInfos);
+		}
 		System.out.format("Downloaded %1$d new reports%n", counter.get());
 		return reports;
 	}
@@ -108,7 +115,7 @@ public class DmarcReportStore {
 			dbf.setNamespaceAware(false);
 			var doc = dbf.newDocumentBuilder().parse(new InputSource(reportRdr));
 
-			// MsgInfo.translateNamespaces(doc);
+			// translateNamespaces(doc);
 
 			var unmarshaller = JAXBContext.newInstance(Feedback.class).createUnmarshaller();
 			return unmarshaller.unmarshal(doc, Feedback.class).getValue();
@@ -117,6 +124,12 @@ public class DmarcReportStore {
 		} catch (ParserConfigurationException | SAXException | JAXBException ex) {
 			throw new IllegalStateException(ex);
 		}
+	}
+
+	static void translateNamespaces(Document doc) {
+		new XmlNamespaceTranslator()
+			.addTranslation("", DMARC_NS)
+			.translateNamespaces(doc);
 	}
 
 	private static Long getLatestReportTime(List<Feedback> reports) {

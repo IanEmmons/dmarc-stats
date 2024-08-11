@@ -7,6 +7,8 @@ import java.util.Objects;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
+// https://stackoverflow.com/questions/29622877/jaxb-ignore-the-namespace-on-unmarshalling
+// https://stackoverflow.com/questions/1492428/javadom-how-do-i-set-the-base-namespace-of-an-already-created-document
 // https://docs.oracle.com/javase/8/docs/api/index.html?org/w3c/dom/Document.html
 public class XmlNamespaceTranslator {
 	private final Map<String, String> translations = new HashMap<>();

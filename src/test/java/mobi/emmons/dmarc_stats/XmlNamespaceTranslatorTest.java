@@ -38,7 +38,7 @@ class XmlNamespaceTranslatorTest {
 		try (var is = getRsrcAsStream(EXAMPLE_XML)) {
 			var doc = dbf.newDocumentBuilder().parse(new InputSource(is));
 
-			MsgInfo.translateNamespaces(doc);
+			DmarcReportStore.translateNamespaces(doc);
 
 			var actualOutput = write(doc);
 			var expectedOutput = getRsrcAsString(EXPECTED_OUTPUT);

@@ -25,20 +25,20 @@ public class MessageDownloaderTest {
 		var now = Instant.now();
 		var lastWeek = now.minus(5, ChronoUnit.DAYS).getEpochSecond();
 
-		var msgInfos = MessageDownloader.download(HOST, USER, password, EMAIL_FOLDER, lastWeek);
+		try (var downloader = new MessageDownloader(HOST, USER, password, EMAIL_FOLDER)) {
+			var msgInfos = downloader.download(lastWeek);
 
-		System.out.format("Downloaded %1$d messages:%n", msgInfos.size());
-		for (var msgInfo : msgInfos) {
-			System.out.format("   From %1$s at %2$s (%3$d records)%n",
-				msgInfo.from(), msgInfo.time(), msgInfo.feedback().getRecord().size());
-		}
-
-		for (var msgInfo : msgInfos) {
-			for (var xml : msgInfo.xmlParts()) {
-				System.out.format("=========================%n%1$s%n", xml);
+			System.out.format("Downloaded %1$d messages:%n", msgInfos.size());
+			for (var msgInfo : msgInfos) {
+				System.out.format("   From %1$s at %2$s%n",
+					msgInfo.from(), msgInfo.time());
 			}
-		}
 
-		assertTrue(msgInfos.size() > 0);
+			for (var msgInfo : msgInfos) {
+				System.out.format("=========================%n%1$s%n", msgInfo.xmlPart());
+			}
+
+			assertTrue(msgInfos.size() > 0);
+		}
 	}
 }
