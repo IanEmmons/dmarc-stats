@@ -13,7 +13,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
@@ -32,9 +31,7 @@ import jakarta.mail.MessagingException;
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Marshaller;
-import mobi.emmons.dmarc_stats.generated.DateRangeType;
 import mobi.emmons.dmarc_stats.generated.Feedback;
-import mobi.emmons.dmarc_stats.generated.ReportMetadataType;
 
 public class DmarcReportStore {
 	private static final String DMARC_NS = "http://dmarc.org/dmarc-xml/0.1";
@@ -63,11 +60,10 @@ public class DmarcReportStore {
 	public List<Feedback> getAllReports() throws IOException, MessagingException {
 		var reports = getDownloadedReports();
 		System.out.format("Num reports in store: %1$d%n", reports.size());
-		var latestReportTime = getLatestReportTime(reports);
-		System.out.format("Getting new reports starting at time %1$d%n", latestReportTime);
-		var counter = new AtomicLong();
 
-		try (var downloader = new MessageDownloader(emailHost, emailUser, emailPassword, emailFolder)) {
+		var counter = new AtomicLong();
+		try (var downloader = new MessageDownloader(emailHost, emailUser, emailPassword,
+				emailFolder, MessageDownloader.OpenMode.READ_WRITE)) {
 			var msgInfos = downloader.download();
 			msgInfos.stream()
 				.map(MsgInfo::xmlPart)
@@ -77,6 +73,7 @@ public class DmarcReportStore {
 				.forEach(reports::add);
 			downloader.setMessageSeenFlags(msgInfos);
 		}
+
 		System.out.format("Downloaded %1$d new reports%n", counter.get());
 		return reports;
 	}
@@ -130,16 +127,6 @@ public class DmarcReportStore {
 		new XmlNamespaceTranslator()
 			.addTranslation("", DMARC_NS)
 			.translateNamespaces(doc);
-	}
-
-	private static Long getLatestReportTime(List<Feedback> reports) {
-		Comparator<Long> comparator = Comparator.naturalOrder();
-		return reports.stream()
-			.map(Feedback::getReportMetadata)
-			.map(ReportMetadataType::getDateRange)
-			.map(DateRangeType::getEnd)
-			.max(comparator)
-			.orElse(null);
 	}
 
 	private void writeReportToStorage(Feedback feedback) {

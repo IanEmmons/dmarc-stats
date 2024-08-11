@@ -20,22 +20,26 @@ import jakarta.mail.search.ReceivedDateTerm;
 import jakarta.mail.search.SearchTerm;
 
 public class MessageDownloader implements AutoCloseable {
+	public static enum OpenMode { READ_ONLY, READ_WRITE }
+
 	private final String host;
 	private final String user;
 	private final String password;
+	private final OpenMode openMode;
 	private final String folder;
 
 	private final Store emailStore;
 	private final Folder emailFolder;
 
-	public MessageDownloader(String host, String user, String password, String folder) throws MessagingException {
+	public MessageDownloader(String host, String user, String password, String folder, OpenMode openMode) throws MessagingException {
 		this.host = Util.requireNonBlank(host, "host");
 		this.user = Util.requireNonBlank(user, "user");
 		this.password = Util.requireNonBlank(password, "password");
 		this.folder = Util.requireNonBlank(folder, "folder");
+		this.openMode = Objects.requireNonNull(openMode, "openMode");
 
 		emailStore = connectToStore(this.host, this.user, this.password);
-		emailFolder = openFolder(emailStore, this.folder);
+		emailFolder = openFolder(emailStore, this.folder, this.openMode);
 	}
 
 	public static Store connectToStore(String host, String user, String password) throws MessagingException {
@@ -50,9 +54,10 @@ public class MessageDownloader implements AutoCloseable {
 		return store;
 	}
 
-	public static Folder openFolder(Store store, String folder) throws MessagingException {
+	public static Folder openFolder(Store store, String folder, OpenMode openMode) throws MessagingException {
 		var emailFolder = store.getFolder(folder);
-		emailFolder.open(Folder.READ_WRITE);
+		var modeFlag = (openMode == OpenMode.READ_WRITE ? Folder.READ_WRITE : Folder.READ_ONLY);
+		emailFolder.open(modeFlag);
 		return emailFolder;
 	}
 

@@ -25,7 +25,8 @@ public class MessageDownloaderTest {
 		var now = Instant.now();
 		var lastWeek = now.minus(5, ChronoUnit.DAYS).getEpochSecond();
 
-		try (var downloader = new MessageDownloader(HOST, USER, password, EMAIL_FOLDER)) {
+		try (var downloader = new MessageDownloader(HOST, USER, password, EMAIL_FOLDER,
+				MessageDownloader.OpenMode.READ_ONLY)) {
 			var msgInfos = downloader.download(lastWeek);
 
 			System.out.format("Downloaded %1$d messages:%n", msgInfos.size());
